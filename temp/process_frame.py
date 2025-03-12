@@ -4,15 +4,12 @@ import os
 
 def read_video(video_path):
     cap = cv2.VideoCapture(video_path)
-    count = 0
     frames = []
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        if count > 150:
-            break
-        count += 1
+
         frames.append(frame)
     return frames
 
