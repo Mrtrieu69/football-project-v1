@@ -6,27 +6,28 @@ import jwt  # Thư viện để tạo và xác thực JWT
 import datetime 
 from functools import wraps
 from flask_cors import CORS
-import cv2, json
-from ultralytics import YOLO
+import cv2
 from main import process
 from temp.json_export import *
 
 app = Flask(__name__)
 
-CORS(app, origins=["http://localhost:5173"], methods=["GET", "POST"], allow_headers=["Content-Type", "Authorization"])
+CORS(app)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///backend/instance/user.db"
+basedir = path.abspath(path.dirname(__file__))
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{path.join(basedir, 'backend', 'instance', 'user.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = "sdf-1j@#39jksAA11msa:?fdsEo"  # Khóa bí mật để ký JWT
 app.config["UPLOAD_FOLDER"] = "backend/uploads"  # Thư mục lưu trữ video tải lên
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(minutes=30)  # Tăng thời gian timeout
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 3600
 
 # Tạo thư mục lưu trữ video nếu chưa tồn tại
 if not path.exists(app.config["UPLOAD_FOLDER"]):
     makedirs(app.config["UPLOAD_FOLDER"])
     
-# Load YOLO model
-model = YOLO("yolov8n.pt")  # Sử dụng YOLOv8 nano (có thể thay bằng model khác)
+if not path.exists(path.join(basedir, "backend", "instance")):
+    makedirs(path.join(basedir, "backend", "instance"))    
 
 db = SQLAlchemy(app)
 
@@ -39,7 +40,8 @@ class User(db.Model):
 
 
 with app.app_context():  # Tạo application context
-    if not path.exists("user.db"):
+    db_path = app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "")
+    if not path.exists(db_path):
         db.create_all()  # Tạo bảng trong cơ sở dữ liệu
         print("Created database!")
         
@@ -158,7 +160,7 @@ def login():
 # Route bảo mật (yêu cầu token)
 @app.route("/api/upload-video", methods=["POST"])
 @token_required
-def upload_video():
+def upload_video(current_user):
     # Kiểm tra xem có file video được gửi lên không
     if "video" not in request.files:
         return jsonify({"message": "No video file provided!"}), 400
@@ -178,20 +180,22 @@ def upload_video():
     data, processed_video_path = process_ai_football(video_path)
 
 
-    return jsonify({
+    response = jsonify({
         "message": "Video uploaded successfully!",
         "main_video": processed_video_path[0],
         "circle_video": processed_video_path[1],
         "voronoi_video": processed_video_path[2],
         "line_video": processed_video_path[3],
         "data": data
-    }), 200
+    })
+    
+    return response, 200
 
 
 # Public video
-@app.route("/uploads/<filename>")
+@app.route("/backend/uploads/<filename>")
 def serve_video(filename):
-    return send_from_directory("uploads", filename, mimetype="video/mp4")
+    return send_from_directory("backend/uploads", filename, mimetype="video/mp4")
 
 if __name__ == "__main__":
     app.run(debug=True)
