@@ -22,7 +22,7 @@ mkdir /home/user/football-ai
 cd /home/user/football-ai
 
 # clone file từ git vào thư mục vừa tạo
-git clone https://github.com/khanhprt/football-project-v1.git
+git clone https://github.com/Mrtrieu69/football-project-v1/tree/main
 
 # chuyển sang thư mục project
 cd /home/user/football-ai/football-project-v1
