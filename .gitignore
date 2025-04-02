@@ -1,0 +1,10 @@
+# models/
+# outputs/
+# inputs/
+
+*.pt
+*.mp4
+*.pkl
+*.avi
+*.db
+
